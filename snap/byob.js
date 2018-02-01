@@ -1792,7 +1792,9 @@ BlockEditorMorph.prototype.init = function (definition, target) {
         comment.block = proto;
     }
     if (definition.body !== null) {
-        proto.nextBlock(isLive ? definition.body.expression
+        console.log(isLive);
+		
+		proto.nextBlock(isLive ? definition.body.expression
                 : definition.body.expression.fullCopy()
         );
     }
@@ -1802,8 +1804,10 @@ BlockEditorMorph.prototype.init = function (definition, target) {
 
     this.definition.scripts.forEach(function (element) {
         block = element.fullCopy();
-        block.setPosition(scripts.position().add(element.position()));
-        scripts.add(block);
+        proto.nextBlock(block);
+		//為了讓block能夠串接，需要把以下指令改為 proto.nextBlock(block);
+		//block.setPosition(scripts.position().add(element.position()));
+        //scripts.add(block);
         if (block instanceof BlockMorph) {
             block.allComments().forEach(function (comment) {
                 comment.align(block);

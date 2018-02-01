@@ -165,6 +165,18 @@ SpriteMorph.prototype.bubbleMaxTextWidth = 130;
 
 SpriteMorph.prototype.initBlocks = function () {
     SpriteMorph.prototype.blocks = {
+		checkSettingState:{
+			type: 'predicate',
+			category: 'RemoteCar',
+			spec: 'check brainWave setting',
+			default: []	
+		},
+		checkStop:{
+			type: 'predicate',
+			category: 'RemoteCar',
+			spec: 'check blink signal for stopping',
+			default: []	
+		},
 		brainWaveState:{
 			type: 'predicate',
 			category: 'RemoteCar',
@@ -2398,7 +2410,8 @@ SpriteMorph.prototype.blockTemplates = function (category) {
 		blocks.push('-');
 		blocks.push(block('ballColor'));
 		blocks.push(block('brainWaveState'));
-		
+		blocks.push(block('checkStop'));
+		blocks.push(block('checkSettingState'));
 		blocks.push('=');
 		blocks.push(block('motorsyncwrite'));
 		
@@ -2616,7 +2629,53 @@ SpriteMorph.prototype.freshPalette = function (category) {
     Morph.prototype.trackChanges = oldFlag;
     return palette;
 };
+// build the block of readallangle
+SpriteMorph.prototype.blockAngle = function(angle){
+	myself = this;
+	console.log(myself);
+	// 產生建立Block的視窗，讓使用者輸入block名稱，以及放置的類別
+	var ide = myself.parentThatIsA(IDE_Morph),
+                    stage = myself.parentThatIsA(StageMorph);
+                new BlockDialogMorph(
+                    null,
+                    function (definition,angle) {
+						console.log(definition);
+                        if (definition.spec !== '') {
+                            if (definition.isGlobal) {
+								
+                                stage.globalBlocks.push(definition);
+                            } else {
+								
+                                myself.customBlocks.push(definition);
+                            }
+                            ide.flushPaletteCache();
+                            ide.refreshPalette();
+							
+							// the message will be returned(id1,angle1/id2,angle2....)
+							var id_angle = angle.split("/");
+							for (var i = id_angle.length-1; i >= 0;i--){
+								console.log(id_angle[i]);
+								// build block for setposition and set inputs
+								var data = id_angle[i].split(",");
+								var newBlock = SpriteMorph.prototype.blockForSelector('motorsetposition', true);
+											   //newBlock.isTemplate = true;
+								inputs = newBlock.inputs();
+								inputs[0].setContents(data[0]);
+								inputs[1].setContents(data[1]);
+								definition.scripts.push(newBlock);
+							}
 
+                            new BlockEditorMorph(definition, myself).popUp();
+                        }
+                    },
+                    myself
+                ).prompt(
+                    'Make A Set Position Block',
+                     null,
+                    myself.world()
+				);
+	
+};
 // SpriteMorph blocks searching
 
 SpriteMorph.prototype.blocksMatching = function (
@@ -4172,7 +4231,6 @@ SpriteMorph.prototype.nestingBounds = function () {
     return result;
 };
 
-// SpriteMorph motion primitives
 
 SpriteMorph.prototype.setPosition = function (aPoint, justMe) {
     // override the inherited default to make sure my parts follow

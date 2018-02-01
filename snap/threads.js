@@ -502,6 +502,7 @@ function Process(topBlock, onComplete, rightAway) {
     this.isInterrupted = false; // experimental, for single-stepping
 	this.IP;
 	this.stateTime = "";
+	this.state = 'stop';
     if (topBlock) {
         this.homeContext.receiver = topBlock.receiver();
         this.homeContext.variables.parentFrame =
@@ -2651,6 +2652,80 @@ Process.prototype.setIPconnection =  function(IP){
 	this.IP = IP;
 	//document.getElementById('IP').innerHTML = IP;
 };
+Process.prototype.checkSettingState = function(){
+	file = "SetState.txt";
+
+
+	var response;
+	if (!this.httpRequest) {
+		this.httpRequest = new XMLHttpRequest();
+		this.httpRequest.open('GET',file,true);
+		this.httpRequest.send(null);
+    }else if (this.httpRequest.readyState === 4) {
+        response = this.httpRequest.responseText;
+        this.httpRequest = null;
+		if(response == "")
+			return false;
+		else{
+			if(response == "finish"){
+					return true;
+			}else
+				return false;
+		}
+	}
+	
+    this.pushContext('doYield');
+    this.pushContext();
+};
+
+Process.prototype.checkStop = function(){
+	file = "BlinkState.txt";
+
+
+	var response;
+	if (!this.httpRequest) {
+		this.httpRequest = new XMLHttpRequest();
+		this.httpRequest.open('GET',file,true);
+		this.httpRequest.send(null);
+    }else if (this.httpRequest.readyState === 4) {
+        response = this.httpRequest.responseText;
+        this.httpRequest = null;
+		if(response == "")
+			return false;
+		else{
+			if(this.stateTime == ""){
+				if(this.state != 'stop'){
+					this.state = 'stop';
+					this.stateTime = response;
+					return true;
+				}else{
+					return false;
+				}
+			}
+			else
+			{	console.log(response);
+
+				if(this.stateTime >= response)
+					return false;
+				else
+				{	if(this.state != 'stop'){
+						this.stateTime = response;
+						this.state = 'stop';
+						return true;
+					}else{
+						return false;
+					}
+						
+				}
+			}
+				
+		}
+	}
+    this.pushContext('doYield');
+    this.pushContext();
+	
+	
+};
 Process.prototype.brainWaveState = function(instate){
 	file = "BrainWaveState.txt";
 
@@ -2673,6 +2748,7 @@ Process.prototype.brainWaveState = function(instate){
 			if(this.stateTime == ""){
 				if(state == instate){
 					this.stateTime = temp[0];
+					this.state = instate;
 					return true;
 				}else{
 					return false;
@@ -2681,11 +2757,12 @@ Process.prototype.brainWaveState = function(instate){
 			else
 			{	//console.log(this.stateTime);
 				//console.log(temp[0]);
-				if(this.stateTime == temp[0])
+				if(this.stateTime >= temp[0])
 					return false;
 				else
 				{	if(state == instate){
 						this.stateTime = temp[0];
+						this.state = instate;
 						return true;
 					}else{
 						return false;
@@ -2883,7 +2960,7 @@ Process.prototype.boxAngle = function(){
         this.httpRequest = null;
 		if(response == "succeed write data"){
 			console.log(response);
-			return;
+			return null;
 		}
 		else
         return response;
@@ -2907,7 +2984,7 @@ Process.prototype.ballAngle = function(){
         this.httpRequest = null;
 		if(response == "succeed write data"){
 			console.log(response);
-			return;
+			return null;
 		}
 		else
         return response;
@@ -3013,19 +3090,21 @@ Process.prototype.motorreadallangle = function(){
 		}
 		else
 		{
-			console.log(response);
+			
 			var stage, ide, myself;
-			myself = this.homeContext.receiver;
+			myself = this.topBlock.parent.owner;
 			stage = myself.parentThatIsA(StageMorph);
 			ide = myself.parentThatIsA(IDE_Morph);
 			
                 new BlockDialogMorph(
                     null,
                     function (definition) {
+
 						// the message will be returned(id1,angle1/id2,angle2....)
 						var id_angle = response.split("/");
+						
 						for (var i = id_angle.length-1; i >= 0;i--){
-							console.log(id_angle[i]);
+							//console.log(id_angle[i]);
 							// build block for setposition and set inputs
 								
 							var data = id_angle[i].split(",");
@@ -3036,20 +3115,13 @@ Process.prototype.motorreadallangle = function(){
 								inputs[0].setContents(data[0]);
 								inputs[1].setContents(data[1]);
 								definition.scripts.push(newBlock);	
-							}
-						console.log(definition);	
-                        if (definition.spec !== '') {
-                            if (definition.isGlobal) {
-								console.log("state.globalBlocks.push");
-                                stage.globalBlocks.push(definition);
-                            } else {
-								console.log("myself.customBlocks.push");
-                                myself.customBlocks.push(definition);
-                            }
-                            ide.flushPaletteCache();
-                            ide.refreshPalette();						
-                            new BlockEditorMorph(definition, myself).popUp();
-                        }
+								
+						}
+						myself.customBlocks.push(definition);
+						ide.flushPaletteCache();
+                        ide.refreshPalette();
+						new BlockEditorMorph(definition, myself).popUp();
+						
                     },
                     myself
                 ).prompt(
@@ -3057,8 +3129,8 @@ Process.prototype.motorreadallangle = function(){
                      null,
                     myself.world()
 				);
-			
-			return response;
+		
+			return;
 		}
 	}
 	
